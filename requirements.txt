@@ -1,4 +1,4 @@
 Flask>=3.0
 openpyxl>=3.0
 python-pptx>=1.0
-gunicorn>=20.0﻿
+gunicorn>=20.0

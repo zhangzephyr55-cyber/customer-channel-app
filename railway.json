@@ -1,5 +1,1 @@
-﻿{
-  "build": {
-    "builder": "nixpacks"
-  }
-}
+﻿{"build":{"builder":"nixpacks"}}

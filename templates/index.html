@@ -1,0 +1,396 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客户渠道信息填写</title>
+<style>
+:root {
+    --surface: #FFFFFF;
+    --surface-alt: #F7F7F8;
+    --text: #1A1A1A;
+    --text-secondary: #6B6B6B;
+    --accent: #002FA7;
+    --accent-hover: #002080;
+    --border: #E0E0E0;
+    --hairline: #D0D0D0;
+    --success: #1A8C3E;
+    --warning: #B8860B;
+    --red: #E4002B;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--surface-alt);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+.header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--hairline);
+    padding: 18px 24px;
+    position: sticky; top: 0; z-index: 10;
+}
+.header h1 {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    color: var(--text);
+}
+.header h1 span { color: var(--accent); font-weight: 600; }
+.container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+/* Name input section */
+.name-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+}
+.name-section label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.name-row { display: flex; gap: 8px; align-items: center; }
+.name-row input {
+    flex: 1;
+    max-width: 280px;
+    height: 40px;
+    padding: 0 14px;
+    font-size: 15px;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+}
+.name-row input:focus { border-color: var(--accent); }
+.btn {
+    height: 40px;
+    padding: 0 24px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-success {
+    background: var(--success);
+    color: #fff;
+}
+.btn-success:hover { background: #147530; }
+.btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Customer table */
+.table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+}
+.table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.table-wrap th {
+    background: var(--surface);
+    padding: 10px 10px;
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-secondary);
+    text-align: left;
+    border-bottom: 2px solid var(--hairline);
+    white-space: nowrap;
+    position: sticky; top: 0;
+}
+.table-wrap th.num { text-align: right; }
+.table-wrap td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--surface-alt);
+    vertical-align: middle;
+}
+.table-wrap tr:last-child td { border-bottom: none; }
+.table-wrap tr:hover td { background: #F9F9FB; }
+.customer-info { font-weight: 500; color: var(--text); }
+.sales-figures {
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    font-size: 12px;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.channel-input {
+    width: 58px;
+    height: 30px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    text-align: right;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    outline: none;
+    transition: border-color 0.15s;
+    font-variant-numeric: tabular-nums;
+}
+.channel-input:focus { border-color: var(--accent); }
+.channel-input.warning { border-color: var(--warning); background: #FFFDF0; }
+.total-pct {
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 36px;
+    display: inline-block;
+}
+.total-pct.ok { color: var(--success); }
+.total-pct.warn { color: var(--warning); }
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+.empty-state p { margin-top: 8px; }
+/* Status bar */
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.status-bar .count { font-weight: 500; color: var(--text); }
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--text);
+    color: #fff;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--red); }
+/* Loading */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+/* Scrollable table body */
+.table-scroll { max-height: 65vh; overflow-y: auto; }
+.table-scroll thead { position: sticky; top: 0; z-index: 2; }
+/* Helper text */
+.helper {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+/* Responsive */
+@media (max-width: 768px) {
+    .container { padding: 16px 12px; }
+    .name-section { padding: 20px 16px; }
+    .name-row input { max-width: 100%; }
+    .table-wrap { font-size: 12px; }
+    .channel-input { width: 48px; font-size: 12px; height: 28px; padding: 0 4px; }
+    .table-wrap th, .table-wrap td { padding: 6px 6px; }
+}
+</style>
+</head>
+<body>
+<div class="header"><h1><span>客户渠道</span> · 信息填写</h1></div>
+<div class="container">
+    <div class="name-section" id="nameSection">
+        <label for="nameInput">您的姓名</label>
+        <div class="name-row">
+            <input type="text" id="nameInput" placeholder="请输入姓名" autocomplete="off">
+            <button class="btn btn-primary" id="queryBtn" onclick="loadCustomers()">查询</button>
+        </div>
+    </div>
+    <div id="tableArea" style="display:none;">
+        <div class="table-wrap">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:100px">客户代码</th>
+                            <th style="min-width:120px">客户</th>
+                            <th>大区</th>
+                            <th>省份</th>
+                            <th class="num">上年度销售</th>
+                            <th class="num">本年度销售</th>
+                            {% for name, key in channels %}
+                            <th class="num" title="{{ name }}">{{ name[:2] }}<br><span style="font-size:10px;font-weight:400;">%</span></th>
+                            {% endfor %}
+                            <th class="num" style="min-width:50px">合计</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerBody"></tbody>
+                </table>
+            </div>
+            <div class="status-bar">
+                <span>共 <span class="count" id="customerCount">0</span> 家客户</span>
+                <button class="btn btn-success" id="saveBtn" onclick="saveAll()">保存全部</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let currentSalesperson = '';
+const channelKeys = {{ channels|map(attribute='1')|list|tojson }};
+
+document.getElementById('nameInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') loadCustomers();
+});
+
+function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + (type || '');
+    requestAnimationFrame(() => {
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2200);
+    });
+}
+
+async function loadCustomers() {
+    const name = document.getElementById('nameInput').value.trim();
+    if (!name) { showToast('请输入姓名', 'error'); return; }
+    const btn = document.getElementById('queryBtn');
+    btn.disabled = true;
+    btn.textContent = '查询中...';
+    try {
+        const r = await fetch('/api/customers?name=' + encodeURIComponent(name));
+        const data = await r.json();
+        if (data.error) { showToast(data.error, 'error'); return; }
+        currentSalesperson = data.salesperson;
+        renderTable(data.customers);
+        document.getElementById('tableArea').style.display = 'block';
+        document.getElementById('nameSection').style.marginBottom = '8px';
+    } catch(e) {
+        showToast('查询失败，请重试', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '查询';
+    }
+}
+
+function renderTable(customers) {
+    const tbody = document.getElementById('customerBody');
+    document.getElementById('customerCount').textContent = customers.length;
+    if (!customers.length) {
+        tbody.innerHTML = '<tr><td colspan="{{ 8 + channels|length }}" class="empty-state"><div style="font-size:24px;margin-bottom:8px;">—</div><p>暂无需要填写的客户</p></td></tr>';
+        return;
+    }
+    let html = '';
+    customers.forEach(c => {
+        let sum = 0;
+        let chs = channelKeys.map(k => { const v = parseFloat(c[k]||0); sum += v; return v; });
+        html += '<tr>';
+        html += '<td class="customer-info">' + esc(c.customer_code) + '</td>';
+        html += '<td class="customer-info">' + esc(c.customer_name) + '</td>';
+        html += '<td>' + esc(c.region) + '</td>';
+        html += '<td>' + esc(c.province) + '</td>';
+        html += '<td class="sales-figures">' + fmtMoney(c.last_year_sales) + '</td>';
+        html += '<td class="sales-figures">' + fmtMoney(c.this_year_sales) + '</td>';
+        chs.forEach((v, i) => {
+            const ok = (v > 0 && v <= 100);
+            html += '<td><input type="number" class="channel-input" min="0" max="100" step="0.1" ' +
+                    'value="' + v + '" data-key="' + channelKeys[i] + '" data-code="' + esc(c.customer_code) + '" ' +
+                    'oninput="onChannelChange(this)" onfocus="this.select()"></td>';
+        });
+        const cls = Math.abs(sum - 100) < 0.05 ? 'ok' : 'warn';
+        html += '<td><span class="total-pct ' + cls + '" id="total-' + esc(c.customer_code) + '">' + sum.toFixed(1) + '</span></td>';
+        html += '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(v) {
+    if (!v || v === 0) return '—';
+    return '¥' + Number(v).toLocaleString('zh-CN', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+
+function onChannelChange(input) {
+    const code = input.dataset.code;
+    const inputs = document.querySelectorAll('input[data-code="' + code + '"]');
+    let sum = 0;
+    inputs.forEach(inp => { sum += parseFloat(inp.value) || 0; });
+    const totalEl = document.getElementById('total-' + code);
+    totalEl.textContent = sum.toFixed(1);
+    totalEl.className = 'total-pct ' + (Math.abs(sum - 100) < 0.05 ? 'ok' : 'warn');
+    inputs.forEach(inp => {
+        inp.classList.toggle('warning', Math.abs(sum - 100) >= 0.05);
+    });
+}
+
+async function saveAll() {
+    if (!currentSalesperson) { showToast('请先查询客户', 'error'); return; }
+    const rows = document.querySelectorAll('#customerBody tr');
+    const channels = [];
+    rows.forEach(tr => {
+        const codeCell = tr.querySelector('td:first-child');
+        if (!codeCell) return;
+        const code = codeCell.textContent.trim();
+        const inputs = tr.querySelectorAll('.channel-input');
+        if (!inputs.length) return;
+        const ch = { customer_code: code };
+        inputs.forEach(inp => {
+            ch[inp.dataset.key] = parseFloat(inp.value) || 0;
+        });
+        channels.push(ch);
+    });
+    if (!channels.length) { showToast('没有可保存的数据', 'error'); return; }
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+    try {
+        const r = await fetch('/api/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ salesperson: currentSalesperson, channels })
+        });
+        const data = await r.json();
+        if (data.success) {
+            showToast('保存成功 ✓', 'success');
+        } else {
+            showToast(data.error || '保存失败', 'error');
+        }
+    } catch(e) {
+        showToast('保存失败，请重试', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '保存全部';
+    }
+}
+</script>
+</body>
+</html>

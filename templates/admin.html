@@ -1,0 +1,496 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理 · 客户渠道</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+    --surface: #FFFFFF;
+    --surface-alt: #F7F7F8;
+    --text: #1A1A1A;
+    --text-secondary: #6B6B6B;
+    --accent: #002FA7;
+    --accent-hover: #002080;
+    --border: #E0E0E0;
+    --hairline: #D0D0D0;
+    --success: #1A8C3E;
+    --warning: #B8860B;
+    --red: #E4002B;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--surface-alt);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+.header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--hairline);
+    padding: 18px 24px;
+    position: sticky; top: 0; z-index: 10;
+}
+.header h1 { font-size: 16px; font-weight: 500; letter-spacing: 0.3px; }
+.header h1 span { color: var(--accent); font-weight: 600; }
+.header .sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; display: flex; flex-direction: column; gap: 24px; }
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+.card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.card-body { padding: 20px; }
+/* Upload */
+.upload-area {
+    border: 1px dashed var(--border);
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.upload-area:hover { border-color: var(--accent); background: #FAFAFE; }
+.upload-area.dragover { border-color: var(--accent); background: #F0F2FF; }
+.upload-area .icon { font-size: 28px; color: var(--text-secondary); margin-bottom: 8px; }
+.upload-area p { font-size: 14px; color: var(--text-secondary); }
+.upload-area .hint { font-size: 12px; color: #999; margin-top: 6px; }
+.upload-area input[type=file] { display: none; }
+.upload-status {
+    margin-top: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+}
+.upload-status.success { background: #F0FAF3; border: 1px solid var(--success); color: var(--success); }
+.upload-status.error { background: #FFF5F5; border: 1px solid var(--red); color: var(--red); }
+/* Stats grid */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); }
+.stat-cell { background: var(--surface); padding: 20px; text-align: center; }
+.stat-cell .num {
+    font-size: 36px;
+    font-weight: 500;
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+.stat-cell .num.accent { color: var(--accent); }
+.stat-cell .num.success { color: var(--success); }
+.stat-cell .num.warning { color: var(--warning); }
+.stat-cell .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-secondary); margin-top: 6px; }
+/* Charts */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.chart-box { position: relative; }
+.chart-box canvas { width: 100% !important; max-height: 300px; }
+.chart-box h3 {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--hairline);
+}
+.chart-full { grid-column: 1 / -1; }
+/* Person table */
+.person-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.person-table th {
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--hairline);
+}
+.person-table th.num { text-align: right; }
+.person-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--surface-alt);
+}
+.person-table td.num { text-align: right; font-family: "SF Mono", "Menlo", "Consolas", monospace; font-size: 12px; font-variant-numeric: tabular-nums; }
+.person-table tr:last-child td { border-bottom: none; }
+.badge {
+    display: inline-block;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 500;
+}
+.badge.remain { background: #FFF5F5; color: var(--red); }
+.badge.done { background: #F0FAF3; color: var(--success); }
+/* Buttons */
+.btn {
+    height: 40px;
+    padding: 0 24px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #147530; }
+.btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+}
+.btn-outline:hover { background: #F0F2FF; }
+.btn-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+/* Toast */
+.toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    padding: 12px 24px; font-size: 14px; font-weight: 500;
+    background: var(--text); color: #fff; opacity: 0;
+    transition: all 0.3s ease; pointer-events: none; z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--red); }
+.loading-overlay { display: none; text-align: center; padding: 20px; color: var(--text-secondary); }
+/* Tabs */
+.tabs { display: flex; border-bottom: 1px solid var(--hairline); margin: -20px -20px 20px -20px; padding: 0 20px; }
+.tab {
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+/* Insights */
+.insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); margin-bottom: 20px; }
+.insight-cell { background: var(--surface); padding: 16px; }
+.insight-cell .val { font-size: 20px; font-weight: 600; font-family: "SF Mono", monospace; font-variant-numeric: tabular-nums; }
+.insight-cell .val.accent { color: var(--accent); }
+.insight-cell .val.success { color: var(--success); }
+.insight-cell .val.warning { color: var(--warning); }
+.insight-cell .lbl { font-size: 11px; color: var(--text-secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+@media (max-width: 768px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .insight-grid { grid-template-columns: repeat(1, 1fr); }
+    .container { padding: 16px 12px; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+    <h1><span>管理</span> · 客户渠道数据</h1>
+    <div class="sub">上传数据 · 查看进度 · 数据分析 · 导出报告</div>
+</div>
+<div class="container">
+    <!-- Upload card -->
+    <div class="card">
+        <div class="card-header">上传数据 <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;">上传后将清空旧渠道数据，需重新填写</span></div>
+        <div class="card-body">
+            <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div class="icon">📄</div>
+                <p>点击或拖动 Excel 文件到此处</p>
+                <div class="hint">支持 .xlsx 格式，需包含：年月日、单据号、客户代码、客户、业务员、大区、省份、销售金额</div>
+                <input type="file" id="fileInput" accept=".xlsx" onchange="handleUpload(this.files[0])">
+            </div>
+            <div id="uploadStatus" class="upload-status" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Tabs: 进度 / 分析 -->
+    <div class="card" id="mainCard" style="display:none;">
+        <div class="card-header"><span>数据总览</span></div>
+        <div class="card-body" style="padding-top:0;">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('overview',this)">进度概览</div>
+                <div class="tab" onclick="switchTab('analysis',this)">数据分析</div>
+            </div>
+
+            <!-- Tab: Overview -->
+            <div class="tab-content active" id="tabOverview">
+                <div class="stats-grid">
+                    <div class="stat-cell">
+                        <div class="num accent" id="statEffective">—</div>
+                        <div class="label">有效客户</div>
+                    </div>
+                    <div class="stat-cell">
+                        <div class="num success" id="statFilled">—</div>
+                        <div class="label">已填完（合计100%）</div>
+                    </div>
+                    <div class="stat-cell">
+                        <div class="num warning" id="statRemaining">—</div>
+                        <div class="label">待填写</div>
+                    </div>
+                    <div class="stat-cell">
+                        <div class="num accent" id="statSalespeople">—</div>
+                        <div class="label">业务员数</div>
+                    </div>
+                </div>
+                <div style="margin-top:20px;">
+                    <table class="person-table">
+                        <thead><tr><th>业务员</th><th class="num">客户数</th><th class="num">已填完</th><th class="num">未填写</th></tr></thead>
+                        <tbody id="personBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab: Analysis -->
+            <div class="tab-content" id="tabAnalysis">
+                <div id="analysisContent" style="min-height:200px;">
+                    <div class="loading-overlay" style="display:block;padding:40px;">加载分析数据...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export card -->
+    <div class="card" id="exportCard" style="display:none;">
+        <div class="card-header">导出</div>
+        <div class="card-body">
+                        <div class="btn-bar">
+                <button class="btn btn-success" onclick="exportExcel()">导出汇总 Excel</button>
+                <button class="btn btn-outline" onclick="exportPPT()">导出分析 PPT</button>
+                <button class="btn btn-outline" onclick="window.print()">打印 / 导出 PDF</button>
+                <span style="font-size:12px;color:var(--text-secondary);">Excel：客户信息 + 渠道占比 | PPT：分析报告 | PDF：打印生成</span>
+            </div>
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--hairline);">
+                <div style="font-size:13px;font-weight:500;margin-bottom:8px;">⬇️ 数据恢复</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">
+                    如果云端数据丢失，把之前导出的 Excel 拖到这里恢复渠道数据：
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="file" id="restoreInput" accept=".xlsx" style="flex:1;padding:6px 0;font-size:13px;font-family:inherit;" onchange="restoreData(this.files[0])">
+                </div>
+                <div id="restoreStatus" style="margin-top:8px;font-size:13px;display:none;"></div>
+            </div>
+<div class="toast" id="toast"></div>
+
+<script>
+let uploadInProgress = false;
+let chartInstances = {};
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length) handleUpload(files[0]);
+});
+
+function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast ' + (type||'');
+    requestAnimationFrame(() => { t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); });
+}
+
+function switchTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+    if (name === 'analysis') loadAnalysis();
+}
+
+async function handleUpload(file) {
+    if (!file || uploadInProgress) return;
+    if (!file.name.endsWith('.xlsx')) { showToast('请选择 .xlsx 文件', 'error'); return; }
+    uploadInProgress = true;
+    const status = document.getElementById('uploadStatus');
+    status.style.display = 'block';
+    status.className = 'upload-status';
+    status.textContent = '正在上传解析...';
+    const form = new FormData();
+    form.append('file', file);
+    try {
+        const r = await fetch('/admin/upload', { method: 'POST', body: form });
+        const data = await r.json();
+        if (data.error) {
+            status.className = 'upload-status error';
+            status.textContent = '✗ ' + data.error;
+            showToast(data.error, 'error');
+        } else {
+            status.className = 'upload-status success';
+            status.textContent = '✓ ' + data.message + '。渠道数据已清空，请通知业务员重新填写';
+            showToast('上传成功，渠道数据已重置', 'success');
+            loadStats();
+        }
+    } catch(e) {
+        status.className = 'upload-status error';
+        status.textContent = '✗ 上传失败，请重试';
+        showToast('上传失败', 'error');
+    } finally {
+        uploadInProgress = false;
+    }
+}
+
+async function loadStats() {
+    document.getElementById('mainCard').style.display = 'block';
+    document.getElementById('exportCard').style.display = 'block';
+    try {
+        const r = await fetch('/admin/stats');
+        const data = await r.json();
+        document.getElementById('statEffective').textContent = data.effective || 0;
+        document.getElementById('statFilled').textContent = data.filled || 0;
+        document.getElementById('statRemaining').textContent = data.remaining || 0;
+        document.getElementById('statSalespeople').textContent = (data.person_stats||[]).length;
+        let html = '';
+        (data.person_stats||[]).forEach(p => {
+            html += '<tr><td>' + esc(p.name) + '</td>';
+            html += '<td class="num">' + p.total + '</td>';
+            html += '<td class="num"><span class="badge done">' + p.filled + '</span></td>';
+            html += '<td class="num"><span class="badge remain">' + p.remaining + '</span></td></tr>';
+        });
+        if (!html) html = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">暂无数据</td></tr>';
+        document.getElementById('personBody').innerHTML = html;
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+let analysisLoaded = false;
+async function loadAnalysis() {
+    if (analysisLoaded) return;
+    analysisLoaded = true;
+    const cont = document.getElementById('analysisContent');
+    try {
+        const r = await fetch('/admin/analysis/data');
+        const d = await r.json();
+        cont.innerHTML = buildAnalysisHTML(d);
+        renderCharts(d);
+    } catch(e) {
+        cont.innerHTML = '<p style="text-align:center;color:var(--text-secondary);padding:40px;">暂无分析数据，请先上传 Excel</p>';
+    }
+}
+
+function buildAnalysisHTML(d) {
+    const ch = d.channels || {};
+    const dom = d.dominant_channel || {};
+    const reg = d.regions || {};
+    let html = '';
+
+    // Key insights bar
+    html += '<div class="insight-grid">';
+    html += '<div class="insight-cell"><div class="val accent">' + d.total_customers + '</div><div class="lbl">有效客户</div></div>';
+    html += '<div class="insight-cell"><div class="val success">' + d.filled_customers + '</div><div class="lbl">已填完渠道</div></div>';
+    html += '<div class="insight-cell"><div class="val warning">' + d.completion_pct + '%</div><div class="lbl">填写完成率</div></div>';
+    html += '</div>';
+
+    // Charts
+    html += '<div class="chart-grid">';
+    html += '<div class="chart-box"><h3>渠道平均占比</h3><canvas id="chAvg"></canvas></div>';
+    html += '<div class="chart-box"><h3>渠道覆盖率（客户数）</h3><canvas id="chCov"></canvas></div>';
+    html += '<div class="chart-box chart-full"><h3>各渠道占比分布（按客户）</h3><canvas id="chDist"></canvas></div>';
+    html += '</div>';
+    return html;
+}
+
+function renderCharts(d) {
+    const ch = d.channels || {};
+    const names = Object.keys(ch);
+    const avgVals = names.map(n => ch[n].avg);
+    const covVals = names.map(n => ch[n].count_gt0);
+    const COLORS = ['#002FA7','#E4002B','#1A8C3E','#B8860B','#FF6B35','#6B4CE6','#00A8B5','#999999'];
+
+    // Destroy old charts
+    Object.values(chartInstances).forEach(c => { try { c.destroy(); } catch(e) {} });
+    chartInstances = {};
+
+    // Chart 1: Average channel %
+    const ctx1 = document.getElementById('chAvg').getContext('2d');
+    chartInstances.avg = new Chart(ctx1, {
+        type: 'bar',
+        data: { labels: names, datasets: [{ label: '平均占比', data: avgVals, backgroundColor: COLORS.slice(0,names.length), borderRadius: 0 }] },
+        options: { responsive: true, maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+        }
+    });
+
+    // Chart 2: Coverage (number of customers)
+    const ctx2 = document.getElementById('chCov').getContext('2d');
+    chartInstances.cov = new Chart(ctx2, {
+        type: 'bar',
+        data: { labels: names, datasets: [{ label: '覆盖客户数', data: covVals, backgroundColor: COLORS.slice(0,names.length), borderRadius: 0 }] },
+        options: { responsive: true, maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Chart 3: Stacked bar per customer (top 20)
+    // Simplified: show distribution of channel sums
+    const ctx3 = document.getElementById('chDist').getContext('2d');
+    chartInstances.dist = new Chart(ctx3, {
+        type: 'polarArea',
+        data: {
+            labels: names,
+            datasets: [{
+                data: names.map(n => ch[n].total),
+                backgroundColor: COLORS.slice(0,names.length).map(c => c + '99'),
+                borderColor: COLORS.slice(0,names.length),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'right', labels: { font: { size: 11 } } }
+            },
+            scales: { r: { beginAtZero: true, ticks: { display: false } } }
+        }
+    });
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function exportExcel() { window.location.href = '/admin/export'; showToast('正在下载 Excel...', 'success'); }
+async function restoreData(file) {
+    if (!file) return;
+    if (!file.name.endsWith('.xlsx')) { showToast('请选择 .xlsx 文件', 'error'); return; }
+    const st = document.getElementById('restoreStatus');
+    st.style.display = 'block'; st.className = 'upload-status'; st.textContent = '正在恢复...';
+    const form = new FormData(); form.append('file', file);
+    try {
+        const r = await fetch('/admin/import', { method:'POST', body:form });
+        const d = await r.json();
+        if (d.error) { st.className = 'upload-status error'; st.textContent = '✗ ' + d.error; showToast(d.error, 'error'); }
+        else { st.className = 'upload-status success'; st.textContent = '✓ ' + d.message; showToast('恢复成功', 'success'); loadStats(); }
+    } catch(e) {
+        st.className = 'upload-status error'; st.textContent = '✗ 恢复失败'; showToast('恢复失败', 'error');
+    }
+    document.getElementById('restoreInput').value = '';
+}
+function exportPPT() { window.location.href = '/admin/analysis/export-ppt'; showToast('正在生成 PPT...', 'success'); }
+
+window.addEventListener('DOMContentLoaded', loadStats);
+</script>
+</body>
+</html>
+

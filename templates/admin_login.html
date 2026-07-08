@@ -1,0 +1,134 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理员登录</title>
+<style>
+:root {
+    --surface: #FFFFFF;
+    --surface-alt: #F7F7F8;
+    --text: #1A1A1A;
+    --text-secondary: #6B6B6B;
+    --accent: #002FA7;
+    --accent-hover: #002080;
+    --border: #E0E0E0;
+    --hairline: #D0D0D0;
+    --red: #E4002B;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--surface-alt);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+}
+.login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 40px;
+    width: 360px;
+    max-width: 90vw;
+}
+.login-card h1 {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+}
+.login-card h1 span { color: var(--accent); font-weight: 600; }
+.login-card .sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--hairline);
+}
+.login-card label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.login-card input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    font-size: 15px;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+    margin-bottom: 16px;
+}
+.login-card input:focus { border-color: var(--accent); }
+.btn {
+    width: 100%;
+    height: 40px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    font-family: inherit;
+    background: var(--accent);
+    color: #fff;
+    transition: background 0.15s;
+}
+.btn:hover { background: var(--accent-hover); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.error {
+    margin-top: 12px;
+    padding: 8px 12px;
+    font-size: 13px;
+    background: #FFF5F5;
+    border: 1px solid var(--red);
+    color: var(--red);
+    display: none;
+}
+</style>
+</head>
+<body>
+<div class="login-card">
+    <h1><span>管理</span> · 登录</h1>
+    <div class="sub">请输入管理员密码</div>
+    <label for="pwd">密码</label>
+    <input type="password" id="pwd" onkeydown="if(event.key==='Enter')login()" autofocus>
+    <button class="btn" id="loginBtn" onclick="login()">登录</button>
+    <div class="error" id="errMsg">密码错误</div>
+</div>
+<script>
+async function login() {
+    const pwd = document.getElementById('pwd').value;
+    const btn = document.getElementById('loginBtn');
+    const err = document.getElementById('errMsg');
+    if (!pwd) { err.textContent='请输入密码'; err.style.display='block'; return; }
+    btn.disabled = true;
+    btn.textContent = '验证中...';
+    err.style.display = 'none';
+    try {
+        const r = await fetch('/admin/login', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'password='+encodeURIComponent(pwd) });
+        if (r.ok) {
+            window.location.href = '/admin';
+        } else {
+            err.textContent = '密码错误';
+            err.style.display = 'block';
+        }
+    } catch(e) {
+        err.textContent = '验证失败';
+        err.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '登录';
+    }
+}
+</script>
+</body>
+</html>

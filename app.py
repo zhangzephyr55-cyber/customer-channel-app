@@ -46,16 +46,26 @@ def init_db():
         );
         CREATE TABLE IF NOT EXISTS new_customers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            customer_code TEXT UNIQUE,
+            customer_code TEXT,
             customer_name TEXT,
             salesperson TEXT,
             region TEXT,
             province TEXT,
+            last_year_sales REAL DEFAULT 0,
+            this_year_sales REAL DEFAULT 0,
             created_at TEXT DEFAULT (datetime('now','localtime'))
         );
     """)
     conn.commit()
     conn.close()
+    # Migrate existing databases (add columns if missing)
+    conn2 = get_db()
+    for col in ["last_year_sales", "this_year_sales"]:
+        try:
+            conn2.execute(f"ALTER TABLE new_customers ADD COLUMN {col} REAL DEFAULT 0")
+        except:
+            pass
+    conn2.close()
 
 init_db()
 
@@ -89,7 +99,7 @@ def get_effective_customers(salesperson=None):
         new_rows = conn.execute("""
             SELECT customer_code, customer_name, salesperson, region, province,
                    1 AS is_new_customer, 999 AS order_count_last_year,
-                   0 AS last_year_sales, 0 AS this_year_sales
+                   COALESCE(last_year_sales,0) AS last_year_sales, COALESCE(this_year_sales,0) AS this_year_sales
             FROM new_customers WHERE salesperson=?
         """, [salesperson]).fetchall()
     else:
@@ -105,7 +115,7 @@ def get_effective_customers(salesperson=None):
         new_rows = conn.execute("""
             SELECT customer_code, customer_name, salesperson, region, province,
                    1 AS is_new_customer, 999 AS order_count_last_year,
-                   0 AS last_year_sales, 0 AS this_year_sales
+                   COALESCE(last_year_sales,0) AS last_year_sales, COALESCE(this_year_sales,0) AS this_year_sales
             FROM new_customers
         """).fetchall()
     result = []
@@ -177,14 +187,32 @@ def api_add_customer():
     province = data.get("province","").strip()
     if not sp or not name:
         return jsonify({"error":"请填写客户名称"}), 400
+    code = data.get("customer_code","").strip()
+    last_sales = float(data.get("last_year_sales",0) or 0)
+    this_sales = float(data.get("this_year_sales",0) or 0)
     conn = get_db()
-    count = conn.execute("SELECT COALESCE(MAX(CAST(SUBSTR(customer_code,3) AS INTEGER)),0) FROM new_customers").fetchone()[0] + 1
-    code = f"XQ{count:03d}"
-    conn.execute("INSERT INTO new_customers (customer_code,customer_name,salesperson,region,province) VALUES (?,?,?,?,?)",
-                 [code, name, sp, region, province])
+    if not code:
+        count = conn.execute("SELECT COALESCE(MAX(CAST(SUBSTR(customer_code,3) AS INTEGER)),0) FROM new_customers").fetchone()[0] + 1
+        code = f"XQ{count:03d}"
+    conn.execute("INSERT INTO new_customers (customer_code,customer_name,salesperson,region,province,last_year_sales,this_year_sales) VALUES (?,?,?,?,?,?,?)",
+                 [code, name, sp, region, province, last_sales, this_sales])
     conn.commit()
     conn.close()
     return jsonify({"success":True, "customer_code":code, "customer_name":name})
+
+
+
+@app.route("/api/customer/<customer_code>", methods=["DELETE"])
+def api_delete_customer(customer_code):
+    sp = request.args.get("salesperson","").strip()
+    if not sp or not customer_code:
+        return jsonify({"error":"缺少参数"}), 400
+    conn = get_db()
+    conn.execute("DELETE FROM channel_fillings WHERE customer_code=? AND salesperson=?", [customer_code, sp])
+    conn.execute("DELETE FROM new_customers WHERE customer_code=? AND salesperson=?", [customer_code, sp])
+    conn.commit()
+    conn.close()
+    return jsonify({"success":True, "message":"已删除"})
 
 @app.route("/admin/login", methods=["POST"])
 def admin_login():

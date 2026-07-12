@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -249,6 +249,7 @@ body {
                             <th class="num" title="{{ name }}">{{ name[:2] }}<br><span style="font-size:10px;font-weight:400;">%</span></th>
                             {% endfor %}
                             <th class="num" style="min-width:50px">合计</th>
+                            <th style="min-width:100px">备注</th>
                         </tr>
                     </thead>
                     <tbody id="customerBody"></tbody>
@@ -256,7 +257,7 @@ body {
             </div>
             <div class="status-bar">
                 <span>共 <span class="count" id="customerCount">0</span> 家客户</span>
-                <button class="btn btn-success" id="saveBtn" onclick="saveAll()">保存全部</button>
+                <div style="display:flex;gap:8px;"><button class="btn btn-primary" onclick="showAddCustomer()" style="font-size:12px;padding:0 12px;height:34px;">+ 添加新客户</button><button class="btn btn-success" id="saveBtn" onclick="saveAll()">保存全部</button></div>
             </div>
         </div>
     </div>
@@ -328,6 +329,7 @@ function renderTable(customers) {
         });
         const cls = Math.abs(sum - 100) < 0.05 ? 'ok' : 'warn';
         html += '<td><span class="total-pct ' + cls + '" id="total-' + esc(c.customer_code) + '">' + sum.toFixed(1) + '</span></td>';
+        html += '<td><input type="text" class="notes-input" value="' + esc(c.notes||'') + '" data-code="' + esc(c.customer_code) + '" placeholder="备注" style="width:100px;height:30px;padding:0 6px;font-size:12px;border:1px solid var(--border);outline:none;font-family:inherit;"></td>';
         html += '</tr>';
     });
     tbody.innerHTML = html;
@@ -366,6 +368,8 @@ async function saveAll() {
         inputs.forEach(inp => {
             ch[inp.dataset.key] = parseFloat(inp.value) || 0;
         });
+        const notesEl = tr.querySelector('.notes-input');
+        if (notesEl) ch.notes = notesEl.value;
         channels.push(ch);
     });
     if (!channels.length) { showToast('没有可保存的数据', 'error'); return; }
@@ -390,6 +394,54 @@ async function saveAll() {
         btn.disabled = false;
         btn.textContent = '保存全部';
     }
+}
+</script>
+
+<div id="addModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeAddCustomer()">
+    <div style="background:#fff;max-width:400px;width:90%;padding:28px;border:1px solid var(--border);">
+        <h3 style="font-size:15px;font-weight:500;margin-bottom:4px;">添加新客户</h3>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--hairline);">未在金蝶数据中的新客户，添加后即可填写渠道占比</p>
+        <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;">客户名称 *</label>
+        <input id="newName" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;margin-bottom:12px;font-family:inherit;">
+        <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;">大区</label>
+        <input id="newRegion" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;margin-bottom:12px;font-family:inherit;">
+        <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;">省份</label>
+        <input id="newProvince" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;margin-bottom:20px;font-family:inherit;">
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn" style="background:transparent;color:var(--text-secondary);border:1px solid var(--border);height:36px;padding:0 16px;font-size:13px;" onclick="closeAddCustomer()">取消</button>
+            <button class="btn btn-primary" style="height:36px;padding:0 16px;font-size:13px;" id="addCustBtn" onclick="addNewCustomer()">添加</button>
+        </div>
+        <div id="addCustStatus" style="margin-top:8px;font-size:12px;display:none;"></div>
+    </div>
+</div>
+
+<script>
+function showAddCustomer() {
+    document.getElementById('addModal').style.display = 'flex';
+    document.getElementById('newName').value = '';
+    document.getElementById('newRegion').value = '';
+    document.getElementById('newProvince').value = '';
+    document.getElementById('addCustStatus').style.display = 'none';
+    document.getElementById('newName').focus();
+}
+function closeAddCustomer() { document.getElementById('addModal').style.display = 'none'; }
+async function addNewCustomer() {
+    const name = document.getElementById('newName').value.trim();
+    const region = document.getElementById('newRegion').value.trim();
+    const province = document.getElementById('newProvince').value.trim();
+    if (!name) { showToast('请填写客户名称', 'error'); return; }
+    const btn = document.getElementById('addCustBtn');
+    btn.disabled = true; btn.textContent = '添加中...';
+    try {
+        const r = await fetch('/api/add-customer', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({salesperson:currentSalesperson, customer_name:name, region:region, province:province})
+        });
+        const d = await r.json();
+        if (d.error) { showToast(d.error, 'error'); }
+        else { closeAddCustomer(); showToast('新客户 ' + d.customer_name + ' 添加成功', 'success'); loadCustomers(); }
+    } catch(e) { showToast('添加失败', 'error'); }
+    finally { btn.disabled = false; btn.textContent = '添加'; }
 }
 </script>
 </body>

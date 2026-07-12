@@ -178,6 +178,10 @@ body {
     color: var(--text-secondary);
 }
 .status-bar .count { font-weight: 500; color: var(--text); }
+/* Delete button */
+.btn-del { width: 28px; height: 28px; padding: 0; font-size: 12px; line-height: 28px; text-align: center; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.btn-del:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
 /* Toast */
 .toast {
     position: fixed;
@@ -250,6 +254,7 @@ body {
                             {% endfor %}
                             <th class="num" style="min-width:50px">合计</th>
                             <th style="min-width:100px">备注</th>
+                            <th style="width:50px">操作</th>
                         </tr>
                     </thead>
                     <tbody id="customerBody"></tbody>
@@ -329,7 +334,7 @@ function renderTable(customers) {
         });
         const cls = Math.abs(sum - 100) < 0.05 ? 'ok' : 'warn';
         html += '<td><span class="total-pct ' + cls + '" id="total-' + esc(c.customer_code) + '">' + sum.toFixed(1) + '</span></td>';
-        html += '<td><input type="text" class="notes-input" value="' + esc(c.notes||'') + '" data-code="' + esc(c.customer_code) + '" placeholder="备注" style="width:100px;height:30px;padding:0 6px;font-size:12px;border:1px solid var(--border);outline:none;font-family:inherit;"></td>';
+        html += '<td><input type="text" class="notes-input" value="' + esc(c.notes||'') + '" data-code="' + esc(c.customer_code) + '" placeholder="备注" style="width:100px;height:30px;padding:0 6px;font-size:12px;border:1px solid var(--border);outline:none;font-family:inherit;"></td>'; html += '<td><button class="btn-del" onclick="deleteCustomer(\u0027 + esc(c.customer_code) + \u0027)" title="删除此客户">✕</button></td>';
         html += '</tr>';
     });
     tbody.innerHTML = html;
@@ -403,10 +408,23 @@ async function saveAll() {
         <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--hairline);">未在金蝶数据中的新客户，添加后即可填写渠道占比</p>
         <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;">客户名称 *</label>
         <input id="newName" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;margin-bottom:12px;font-family:inherit;">
+        <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;">客户代码（不填则自动生成）</label>
+        <input id="newCode" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;margin-bottom:12px;font-family:inherit;" placeholder="例如：KH001">
         <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;">大区</label>
         <input id="newRegion" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;margin-bottom:12px;font-family:inherit;">
         <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;">省份</label>
-        <input id="newProvince" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;margin-bottom:20px;font-family:inherit;">
+        <input id="newProvince" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;margin-bottom:12px;font-family:inherit;">
+        <div style="display:flex;gap:8px;">
+            <div style="flex:1;">
+                <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;">上年度销售额</label>
+                <input id="newLastSales" type="number" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;font-family:inherit;" placeholder="0">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;">本年度销售额</label>
+                <input id="newThisSales" type="number" style="width:100%;height:36px;padding:0 10px;font-size:14px;border:1px solid var(--border);outline:none;font-family:inherit;" placeholder="0">
+            </div>
+        </div>
+        <div style="margin-bottom:20px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
             <button class="btn" style="background:transparent;color:var(--text-secondary);border:1px solid var(--border);height:36px;padding:0 16px;font-size:13px;" onclick="closeAddCustomer()">取消</button>
             <button class="btn btn-primary" style="height:36px;padding:0 16px;font-size:13px;" id="addCustBtn" onclick="addNewCustomer()">添加</button>
@@ -419,23 +437,39 @@ async function saveAll() {
 function showAddCustomer() {
     document.getElementById('addModal').style.display = 'flex';
     document.getElementById('newName').value = '';
+    document.getElementById('newCode').value = '';
     document.getElementById('newRegion').value = '';
     document.getElementById('newProvince').value = '';
+    document.getElementById('newLastSales').value = '';
+    document.getElementById('newThisSales').value = '';
     document.getElementById('addCustStatus').style.display = 'none';
     document.getElementById('newName').focus();
 }
+async function deleteCustomer(code) {
+    if (!confirm('确定删除客户 ' + code + ' 的渠道数据？')) return;
+    try {
+        const r = await fetch('/api/customer/' + encodeURIComponent(code) + '?salesperson=' + encodeURIComponent(currentSalesperson), { method:'DELETE' });
+        const d = await r.json();
+        if (d.success) { showToast('已删除', 'success'); loadCustomers(); }
+        else { showToast(d.error || '删除失败', 'error'); }
+    } catch(e) { showToast('删除失败', 'error'); }
+}
+
 function closeAddCustomer() { document.getElementById('addModal').style.display = 'none'; }
 async function addNewCustomer() {
     const name = document.getElementById('newName').value.trim();
+    const code = document.getElementById('newCode').value.trim();
     const region = document.getElementById('newRegion').value.trim();
     const province = document.getElementById('newProvince').value.trim();
+    const lastSales = parseFloat(document.getElementById('newLastSales').value) || 0;
+    const thisSales = parseFloat(document.getElementById('newThisSales').value) || 0;
     if (!name) { showToast('请填写客户名称', 'error'); return; }
     const btn = document.getElementById('addCustBtn');
     btn.disabled = true; btn.textContent = '添加中...';
     try {
         const r = await fetch('/api/add-customer', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({salesperson:currentSalesperson, customer_name:name, region:region, province:province})
+            body:JSON.stringify({salesperson:currentSalesperson, customer_name:name, customer_code:code, region:region, province:province, last_year_sales:lastSales, this_year_sales:thisSales})
         });
         const d = await r.json();
         if (d.error) { showToast(d.error, 'error'); }
